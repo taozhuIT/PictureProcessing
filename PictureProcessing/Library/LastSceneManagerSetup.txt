@@ -1,4 +1,4 @@
 sceneSetups:
-- path: Assets/Scenes/Image2.unity
+- path: Assets/UCLAGameLab/Scenes/UCLA_Game_Lab_Mesh_Creator.unity
   isLoaded: 1
   isActive: 1

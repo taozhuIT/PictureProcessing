@@ -171,3 +171,5 @@ F:\PictureProcessing\PictureProcessing\obj\Debug\Assembly-CSharp.csproj.CoreComp
 F:\PictureProcessing\PictureProcessing\obj\Debug\Assembly-CSharp.csproj.CopyComplete
 F:\PictureProcessing\PictureProcessing\obj\Debug\Assembly-CSharp.dll
 F:\PictureProcessing\PictureProcessing\obj\Debug\Assembly-CSharp.pdb
+F:\PictureProcessing\PictureProcessing\Temp\bin\Debug\UnityEngine.SpatialTrackingModule.dll
+F:\PictureProcessing\PictureProcessing\Temp\bin\Debug\UnityEngine.SpatialTrackingModule.xml
