@@ -144,7 +144,8 @@ public class Image2 : MonoBehaviour
         grayTexture.Apply();
         img2.texture = grayTexture;
 
-        OnCreateMesh_3(grayTexture);
+        OnCreateMesh_4(grayTexture.width, grayTexture.height, grayTexture.GetPixels());
+        //OnCreateMesh_3(grayTexture);
     }
 
     /// <summary>
@@ -642,14 +643,16 @@ public class Image2 : MonoBehaviour
     }
 
     /// <summary>
-    /// 生成模型(平面位x，y像素网格生成方式)
+    /// 二值化图像生成模型(镂空生成方式)(平面位x，y像素网格生成方式)
     /// </summary>
-    private void OnCreateMesh(int sizeX_, int sizeY_, Color[] pixes_)
+    private void OnCreateMesh_4(int sizeX_, int sizeY_, Color[] pixes_)
     {
         // 创建模型
         Vector3[] verts = new Vector3[sizeX_ * sizeY_];
         Vector2[] uvs = new Vector2[sizeX_ * sizeY_];
         Color[] colors = new Color[sizeX_ * sizeY_];
+
+        List<Color> testBBB = new List<Color>();
 
         for (int y = 0; y < sizeY_; ++y)
         {
@@ -658,14 +661,15 @@ public class Image2 : MonoBehaviour
                 int idx = (y * sizeX_) + x;
                 float px = x * 1;
                 float py = y * 1;
-
                 Color pixel = pixes_[(int)px + (sizeY_ - 1 - (int)py) * sizeX_];
-
+                
                 // 顶点总数除以2，目的是让mesh初始点在mesh中心
-                verts[idx] = new Vector3(-sizeX_ / 2 + px, sizeY_ / 2 - py, pixel.r * 5);
+                verts[idx] = new Vector3(-sizeX_ / 2 + px, pixel.a * 5, sizeY_ / 2 - py);
                 colors[idx] = pixel; //Color.white;
                 // UV的值需要归一化0~1之间，所以需要除以总数
                 uvs[idx] = new Vector2((float)x / sizeX_, (float)y / sizeY_);
+
+                testBBB.Add(pixel);
             }
         }
 
@@ -676,7 +680,97 @@ public class Image2 : MonoBehaviour
         int[] indxs = new int[faceNumX * faceNumY * 6];
         // 顶点法线信息
         Vector3[] norms = new Vector3[sizeX_ * sizeY_];
+        
+        for (int y = 0; y < faceNumY; ++y)
+        {
+            int startIdx = y * sizeX_;
+            for (int x = 0; x < faceNumX; ++x)
+            {
+                int iidx = y * faceNumX + x;
+                int vidx = startIdx + x;
+                
+                // 处理镂空(思路是找到后面右上和右下两个顶点判断颜色a值是否不为0，不为0则计算顶点索引)
+                if(testBBB[vidx + 1].a != 0 || testBBB[vidx + 1 + sizeX_].a != 0)
+                {
+                    int offset6 = iidx * 6;
+                    int i0 = offset6 + 0;
+                    int i1 = offset6 + 1;
+                    int i2 = offset6 + 2;
+                    int i3 = offset6 + 3;
+                    int i4 = offset6 + 4;
+                    int i5 = offset6 + 5;
 
+                    indxs[i0] = vidx;
+                    indxs[i1] = vidx + 1;
+                    indxs[i2] = vidx + 1 + sizeX_;
+                    indxs[i3] = vidx + 1 + sizeX_;
+                    indxs[i4] = vidx + sizeX_;
+                    indxs[i5] = vidx;
+
+                    // 计算法线信息   Vector3.Cross即向量c垂直与向量a,b所在的平面 及法线
+                    Vector3 norm1 = Vector3.Cross(verts[indxs[i1]] - verts[indxs[i0]], verts[indxs[i2]] - verts[indxs[i0]]).normalized;
+                    Vector3 norm2 = Vector3.Cross(verts[indxs[i4]] - verts[indxs[i3]], verts[indxs[i5]] - verts[indxs[i3]]).normalized;
+
+                    norms[indxs[i0]] = norm1;
+                    norms[indxs[i1]] = norm1;
+                    norms[indxs[i2]] = norm1;
+                    norms[indxs[i3]] = norm2;
+                    norms[indxs[i4]] = norm2;
+                    norms[indxs[i5]] = norm2;
+                }
+            }
+        }
+
+        Mesh mesh = new Mesh();
+        mesh.indexFormat = UnityEngine.Rendering.IndexFormat.UInt32;
+        mesh.vertices = verts;
+        mesh.normals = norms;
+        mesh.uv = uvs;
+        mesh.colors = colors;
+        mesh.triangles = indxs;
+        mesh.UploadMeshData(false);
+
+        root.GetComponent<MeshFilter>().mesh = mesh;
+    }
+
+    /// <summary>
+    /// 生成模型(平面位x，y像素网格生成方式)
+    /// </summary>
+    private void OnCreateMesh(int sizeX_, int sizeY_, Color[] pixes_)
+    {
+        // 创建模型
+        Vector3[] verts = new Vector3[sizeX_ * sizeY_];
+        Vector2[] uvs = new Vector2[sizeX_ * sizeY_];
+        Color[] colors = new Color[sizeX_ * sizeY_];
+        
+        for (int y = 0; y < sizeY_; ++y)
+        {
+            for (int x = 0; x < sizeX_; ++x)
+            {
+                int idx = (y * sizeX_) + x;
+                float px = x * 1;
+                float py = y * 1;
+
+                Color pixel = pixes_[(int)px + (sizeY_ - 1 - (int)py) * sizeX_];
+                
+                // 顶点总数除以2，目的是让mesh初始点在mesh中心
+                verts[idx] = new Vector3(-sizeX_ / 2 + px, pixel.a * 5, sizeY_ / 2 - py);
+                colors[idx] = pixel; //Color.white;
+                                        // UV的值需要归一化0~1之间，所以需要除以总数
+                uvs[idx] = new Vector2((float)x / sizeX_, (float)y / sizeY_);
+
+                idx++;
+            }
+        }
+        
+        // 模型面片
+        int faceNumX = sizeX_ - 1;
+        int faceNumY = sizeY_ - 1;
+        // 顶点索引信息
+        int[] indxs = new int[faceNumX * faceNumY * 6];
+        // 顶点法线信息
+        Vector3[] norms = new Vector3[sizeX_ * sizeY_];
+        
         for (int y = 0; y < faceNumY; ++y)
         {
             int startIdx = y * sizeX_;
@@ -692,7 +786,7 @@ public class Image2 : MonoBehaviour
                 int i3 = iidx * 6 + 3;
                 int i4 = iidx * 6 + 4;
                 int i5 = iidx * 6 + 5;
-
+                
                 indxs[i0] = vidx;
                 indxs[i1] = vidx + 1;
                 indxs[i2] = vidx + 1 + sizeX_;

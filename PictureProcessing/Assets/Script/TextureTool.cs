@@ -1,6 +1,8 @@
-﻿using System.Collections;
+﻿using System.IO;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEditor;
 
 /// <summary>
 /// 图像处理工具类
@@ -98,6 +100,26 @@ public class TextureTool
         }
 
         return grayTexture;
+    }
+
+    /// <summary>
+    /// 保存图片
+    /// </summary>
+    /// <param name="path_"></param>
+    /// <param name="name_"></param>
+    /// <param name="texture_"></param>
+    public static void OnSaveTexture2d(string path_, string name_, Texture2D texture_)
+    {
+        byte[] bytes = texture_.EncodeToPNG();
+        if (!Directory.Exists(path_))
+            Directory.CreateDirectory(path_);
+
+        FileStream file = File.Open(path_ + "/" + name_ + ".png", FileMode.Create);
+        BinaryWriter writer = new BinaryWriter(file);
+        writer.Write(bytes);
+        file.Close();
+
+        AssetDatabase.Refresh();
     }
 
     /// <summary>

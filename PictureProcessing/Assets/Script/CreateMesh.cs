@@ -53,8 +53,12 @@ public class CreateMesh : MonoBehaviour
 	void Start () 
     {
         scTexture = TextureTool.OnGetTextureGray(textRwa.texture);
+
+        //TextureTool.OnSaveTexture2d(Application.dataPath + "/Image", "towVal_1", scTexture);
+        //Debug.Log(Application.dataPath);
+
         OnFindMarginPoint();
-	}
+    }
 
     /// <summary>
     /// 找到边缘点
@@ -106,7 +110,6 @@ public class CreateMesh : MonoBehaviour
         // -----------------------------
         orderMarginDataList.Clear();
         OnFindMarginPointOrder();
-        Debug.Log(orderMarginDataList.Count);
         //------------------------------
         // 验证获取顺序
         //StartCoroutine(OnVerifyOrderTest());
@@ -227,23 +230,47 @@ public class CreateMesh : MonoBehaviour
     /// </summary>
     private void OnCreateMesh()
     {
-        Vector3[] vertices = new Vector3[orderMarginDataList.Count * 2];
-        int idx = 0;
+        // -------------------测试-------------------
+        List<texData> guoluList = new List<texData>();
         for (int i = 0; i < orderMarginDataList.Count; ++i)
         {
-            texData data = orderMarginDataList[i];
+            if ((i % 20) == 0)
+            {
+                guoluList.Add(orderMarginDataList[i]);
+            }
+        }
+        // -------------------测试-------------------
+
+        Vector3[] vertices = new Vector3[guoluList.Count * 2];
+        Color[] colors = new Color[guoluList.Count * 2];
+        Vector2[] uvs = new Vector2[guoluList.Count * 2];
+
+        int idx = 0;
+        for (int i = 0; i < guoluList.Count; ++i)
+        {
+            texData data = guoluList[i];
+            colors[idx] = data.color;
             vertices[idx] = new Vector3(data.x * 0.01f, 0, data.y * 0.01f);
-            OnTestCreateCube(vertices[idx]);
+            // UV的值需要归一化0~1之间，所以需要除以总数
+            uvs[idx] = new Vector2((float)data.x / 5.12f, (float)data.y / 5.12f);
+            //OnTestCreateCube(vertices[idx]);
             idx++;
 
             vertices[idx] = new Vector3(data.x * 0.01f , 0.1f, data.y * 0.01f);
-            OnTestCreateCube(vertices[idx]);
+            colors[idx] = data.color;
+            // UV的值需要归一化0~1之间，所以需要除以总数
+            uvs[idx] = new Vector2((float)data.x / 5.12f, (float)data.y / 5.12f);
+            //OnTestCreateCube(vertices[idx]);
             idx++;
         }
 
         Debug.Log(vertices.Length);
-        
+
+        // 顶点索引信息
         int[] index = new int[vertices.Length * 3];
+        // 顶点法线信息
+        Vector3[] norms = new Vector3[vertices.Length];
+
         int count = vertices.Length / 2;
         for (int i = 0; i < count; ++i)
         {
@@ -253,7 +280,7 @@ public class CreateMesh : MonoBehaviour
                 int offset2 = i * 2;
 
                 index[offset6] = offset2;
-                if((offset2 + 1) < vertices.Length)
+                if ((offset2 + 1) < vertices.Length)
                     index[offset6 + 1] = offset2 + 1;
                 if ((offset2 + 2) < vertices.Length)
                     index[offset6 + 2] = offset2 + 2;
@@ -264,19 +291,28 @@ public class CreateMesh : MonoBehaviour
                 if ((offset2 + 2) < vertices.Length)
                     index[offset6 + 5] = offset2 + 2;
 
-                //index[offset6 + 6] = offset2;
-                //if ((offset2 + 3) <= vertices.Length)
-                //    index[offset6 + 7] = offset2 + 3;
-                //if ((offset2 + 2) <= vertices.Length)
-                //    index[offset6 + 8] = offset2 + 2;
-                //if ((offset2 + 2) <= vertices.Length)
-                //    index[offset6 + 9] = offset2 + 2;
-                //if ((offset2) <= vertices.Length)
-                //    index[offset6 + 10] = offset2;
-                //if ((offset2 + 3) <= vertices.Length)
-                //    index[offset6 + 11] = offset2 + 3;
+
+                // 最尾点和最初点缝合
+                if (i == count - 1)
+                {
+                    index[offset6 + 3] = offset2 + 1;
+                    index[offset6 + 4] = 1;
+                    index[offset6 + 5] = 0;
+                }
+
+                // 计算法线信息   Vector3.Cross即向量c垂直与向量a,b所在的平面 及法线
+                Vector3 norm1 = Vector3.Cross(vertices[index[offset6 + 1]] - vertices[index[offset6]], vertices[index[offset6 + 2]] - vertices[index[offset6]]).normalized;
+                Vector3 norm2 = Vector3.Cross(vertices[index[offset6 + 4]] - vertices[index[offset6 + 3]], vertices[index[offset6 + 5]] - vertices[index[offset6 + 3]]).normalized;
+                //Vector3 norm2 = Vector3.Cross(vertices[index[offset6 + 1]] - vertices[index[offset6 + 4]], vertices[index[offset6 + 5]] - vertices[index[offset6 + 4]]).normalized;
+
+                norms[index[offset6]] = norm1;
+                norms[index[offset6 + 1]] = norm1;
+                norms[index[offset6 + 2]] = norm1;
+                norms[index[offset6 + 3]] = norm2;
+                norms[index[offset6 + 4]] = norm2;
+                norms[index[offset6 + 5]] = norm2;
             }
-            catch
+            catch(System.Exception e)
             {
 
             }
@@ -287,6 +323,9 @@ public class CreateMesh : MonoBehaviour
         Mesh mesh = new Mesh();
         mesh.indexFormat = UnityEngine.Rendering.IndexFormat.UInt32;
         mesh.vertices = vertices;
+        mesh.normals = norms;
+        mesh.uv = uvs;
+        mesh.colors = colors;
         mesh.triangles = index;
         mesh.UploadMeshData(false);
         meshRoot.mesh = mesh;
