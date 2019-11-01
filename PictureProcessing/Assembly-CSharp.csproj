@@ -62,6 +62,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Assets\Script\CreateMesh.cs" />
+    <Compile Include="Assets\Script\CreateMesh2.cs" />
     <Compile Include="Assets\Script\FindReferences.cs" />
     <Compile Include="Assets\Script\Image2.cs" />
     <Compile Include="Assets\Script\TextureTool.cs" />
